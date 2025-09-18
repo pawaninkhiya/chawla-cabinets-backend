@@ -24,6 +24,44 @@ export const createModelVerityController = asyncHandler(
     }
 );
 
+// ---------------- UPDATE MODEL VERITY BY ID ----------------
+export const updateModelVerityController = asyncHandler(
+    async (req: Request, res: Response) => {
+        const { id } = req.params;
+        const { name, description, categoryId } = req.body;
+
+        const modelVerity = await ModelVerity.findById(id);
+        if (!modelVerity) {
+            return errorResponse(res, "Model Verity not found", 404);
+        }
+
+        if (name && name.trim() !== modelVerity.name) {
+            const existing = await ModelVerity.findOne({
+                name: name.trim(),
+                _id: { $ne: id },
+            });
+            if (existing) {
+                return errorResponse(res, "Model Verity with this name already exists", 409);
+            }
+        }
+
+        if (name !== undefined) {
+            modelVerity.name = name.trim();
+        }
+        if (description !== undefined) {
+            modelVerity.description = description.trim();
+        }
+        if (categoryId !== undefined) {
+            modelVerity.categoryId = categoryId;
+        }
+
+        const updated = await modelVerity.save();
+
+        return successResponse(res, updated, "Model Verity updated successfully", 200);
+    }
+);
+
+
 // ---------------- GET ALL MODEL VERITY (with pagination + search) ----------------
 
 export const getAllModelVerityController = asyncHandler(

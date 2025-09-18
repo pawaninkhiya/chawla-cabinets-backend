@@ -12,3 +12,12 @@ export const createModelSchema = Joi.object({
         "string.pattern.base": "Category ID must be a valid ObjectId",
     }),
 });
+
+export const updateModelSchema = Joi.object({
+    name: Joi.string().trim().min(1).optional().messages({
+        "string.empty": "Model name cannot be empty",
+    }),
+    description: Joi.string().allow("").trim().optional(),
+    categoryId: Joi.string().optional(),
+}).min(1);
+

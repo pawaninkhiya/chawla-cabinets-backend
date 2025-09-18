@@ -35,7 +35,7 @@ export const getAllCategoriesController = asyncHandler(
 
             const totalCategories = await CategoryModel.countDocuments(query);
             if (totalCategories === 0) {
-                return errorResponse(res, "No categories found", 404);
+                return errorResponse(res, "No categories found", 200);
             }
 
             const { skip, limit: pageSize, page: currentPage, totalPages } = paginate(totalCategories, { page, limit });
@@ -61,23 +61,56 @@ export const getAllCategoriesController = asyncHandler(
     }
 );
 
+// ---------------- UPDATE CATEGORY BY ID ----------------
 
-// ---------------- GET SINGLE CATEGORY BY ID ----------------
-
-export const getCategoryByIdController = asyncHandler(
+export const updateCategoryController = asyncHandler(
     async (req: Request, res: Response) => {
         const { id } = req.params;
+        const { categoryName, description } = req.body;
 
         const category = await CategoryModel.findById(id);
-
         if (!category) {
             return errorResponse(res, "Category not found", 404);
         }
 
-        return successResponse(res, category, "Category fetched successfully", 200);
+        if (categoryName && categoryName.trim() !== category.categoryName) {
+            const existingCategory = await CategoryModel.findOne({
+                categoryName: categoryName.trim(),
+                _id: { $ne: id },
+            });
+            if (existingCategory) {
+                return errorResponse(res, "Category with this categoryName already exists", 409);
+            }
+        }
+        if (categoryName !== undefined) {
+            category.categoryName = categoryName.trim();
+        }
+        if (description !== undefined) {
+            category.description = description.trim();
+        }
+
+        const updatedCategory = await category.save();
+
+        return successResponse(res, updatedCategory, "Category updated successfully", 200);
     }
 );
 
+// ---------------- DELETE CATEGORY BY ID ----------------
+
+export const deleteCategoryController = asyncHandler(
+    async (req: Request, res: Response) => {
+        const { id } = req.params;
+
+        const category = await CategoryModel.findById(id);
+        if (!category) {
+            return errorResponse(res, "Category not found", 404);
+        }
+
+        await CategoryModel.findByIdAndDelete(id);
+
+        return successResponse(res, null, "Category deleted successfully", 200);
+    }
+);
 
 // ---------------- GET CATEGORY OPTIONS  ----------------
 
@@ -104,19 +137,18 @@ export const getCategoryOptionsController = asyncHandler(
 );
 
 
-// ---------------- DELETE CATEGORY BY ID ----------------
+// ---------------- GET SINGLE CATEGORY BY ID ----------------
 
-export const deleteCategoryController = asyncHandler(
+export const getCategoryByIdController = asyncHandler(
     async (req: Request, res: Response) => {
         const { id } = req.params;
 
         const category = await CategoryModel.findById(id);
+
         if (!category) {
             return errorResponse(res, "Category not found", 404);
         }
 
-        await CategoryModel.findByIdAndDelete(id);
-
-        return successResponse(res, null, "Category deleted successfully", 200);
+        return successResponse(res, category, "Category fetched successfully", 200);
     }
 );
