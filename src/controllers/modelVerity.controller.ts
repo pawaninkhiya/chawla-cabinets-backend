@@ -75,7 +75,7 @@ export const getAllModelVerityController = asyncHandler(
 
             const total = await ModelVerity.countDocuments(query);
             if (total === 0) {
-                return errorResponse(res, "No model verities found", 404);
+                return errorResponse(res, "No model verities found", 200);
             }
 
             const { skip, limit: pageSize, page: currentPage, totalPages } = paginate(total, { page, limit });
