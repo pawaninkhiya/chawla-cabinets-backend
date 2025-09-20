@@ -46,7 +46,7 @@ export interface Product extends Document {
 const ProductSchema = new Schema<Product>(
     {
         name: { type: String, required: true },
-        modelId: { type: Schema.Types.ObjectId, ref: "Model", required: true },
+        modelId: { type: Schema.Types.ObjectId, ref: "ModelVerity", required: true },
         categoryId: { type: Schema.Types.ObjectId, ref: "Category", required: true },
         createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
         description: { type: String },
