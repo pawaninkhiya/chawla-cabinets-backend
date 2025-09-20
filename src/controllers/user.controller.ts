@@ -27,7 +27,6 @@ export const createUserController = asyncHandler(
 // ------------------- LOGIN USER -------------------
 export const loginController = asyncHandler(async (req: Request, res: Response) => {
     const { email, password } = req.body;
-    console.log("hsdkdjshdskjh")
     const user = await UserModel.findOne({ email: email.trim().toLowerCase() });
     if (!user) return errorResponse(res, "Invalid email or password", 401);
 

@@ -61,7 +61,6 @@ export const updateModelVerityController = asyncHandler(
     }
 );
 
-
 // ---------------- GET ALL MODEL VERITY (with pagination + search) ----------------
 
 export const getAllModelVerityController = asyncHandler(
@@ -115,5 +114,39 @@ export const deleteModelVerityController = asyncHandler(
         await ModelVerity.findByIdAndDelete(id);
 
         return successResponse(res, null, "Model Verity deleted successfully", 200);
+    }
+);
+
+
+// ---------------- GET MODEL VERITY OPTIONS ----------------
+
+export const getModelVerityOptionsController = asyncHandler(
+    async (req: Request, res: Response) => {
+        try {
+            const { categoryId } = req.query; 
+
+            const query: any = {};
+            if (categoryId) {
+                query.categoryId = categoryId;
+            }
+
+            const modelVerities = await ModelVerity.find(query, "_id name")
+                // .populate("categoryId", "categoryName")
+                .sort({ name: 1 });
+
+            if (!modelVerities || modelVerities.length === 0) {
+                return errorResponse(res, "No model verities found", 404);
+            }
+
+            return successResponse(
+                res,
+                modelVerities,
+                "Model Verity options fetched successfully",
+                200
+            );
+        } catch (err) {
+            console.error(err);
+            return errorResponse(res, "Server error", 500);
+        }
     }
 );
