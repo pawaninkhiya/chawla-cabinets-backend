@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { asyncHandler, errorResponse, successResponse } from "../utils/handlers";
 import { ProductModel } from "../models/product.model";
-import { uploadFileToS3, uploadMultipleToS3 } from "../utils/s3Utils";
+import { deleteMultipleFromS3, uploadFileToS3, uploadMultipleToS3 } from "../utils/s3Utils";
 import { buildSearchQuery } from "../utils/query";
 import { paginate } from "../utils/pagination";
 
@@ -132,4 +132,94 @@ export const getAllProducts = asyncHandler(async (req: Request, res: Response) =
         console.error(err);
         return errorResponse(res, "Failed to fetch products", 500);
     }
+});
+
+// Get single product by ID
+export const getProductById = asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    if (!id) {
+        return errorResponse(res, "Product ID is required", 400);
+    }
+
+    const product = await ProductModel.findById(id)
+        .populate("categoryId", "categoryName")
+        .populate("modelId", "name")
+        .populate("createdBy", "name")
+
+    if (!product) {
+        return errorResponse(res, "Product not found", 404);
+    }
+
+    return successResponse(res, { product }, "Product fetched successfully", 200);
+});
+
+export const updateProductColorOption = asyncHandler(async (req: Request, res: Response) => {
+    const { productId, colorId } = req.params;
+    const { name, body, door, price, mrp, available, removeImages } = req.body;
+
+    if (!productId) return errorResponse(res, "Product ID is required", 400);
+    if (!colorId) return errorResponse(res, "Color ID is required", 400);
+
+    const product = await ProductModel.findById(productId);
+    if (!product) return errorResponse(res, "Product not found", 404);
+
+    const color = product.colors.id(colorId);
+    if (!color) return errorResponse(res, "Color option not found", 404);
+
+    let updatedImages = [...(color.images || [])];
+
+    if (removeImages?.length > 0) {
+        const removeArray: string[] = Array.isArray(removeImages) ? removeImages : [removeImages];
+        const keysToDelete = removeArray.map((url) => url.split("/").pop() as string);
+        await deleteMultipleFromS3(keysToDelete);
+        updatedImages = updatedImages.filter((img) => !removeArray.includes(img));
+    }
+    const files = (req.files as Express.Multer.File[]) || [];
+    if (files.length > 0) {
+        const uploadedUrls = await uploadMultipleToS3(files);
+        updatedImages.push(...uploadedUrls);
+    }
+    if (name !== undefined) color.name = name;
+    if (body !== undefined) color.body = body;
+    if (door !== undefined) color.door = door;
+    if (price !== undefined) color.price = price;
+    if (mrp !== undefined) color.mrp = mrp;
+    if (available !== undefined) color.available = available;
+    color.images = updatedImages;
+
+    await product.save();
+
+    return successResponse(res, color, "Color option updated successfully", 200);
+});
+
+export const addProductColorOption = asyncHandler(async (req: Request, res: Response) => {
+    const { productId } = req.params;
+    const { name, body, door, price, mrp, available } = req.body;
+
+    if (!productId) return errorResponse(res, "Product ID is required", 400);
+
+    const product = await ProductModel.findById(productId);
+    if (!product) return errorResponse(res, "Product not found", 404);
+
+    const files = (req.files as Express.Multer.File[]) || [];
+    let uploadedImages: string[] = [];
+    if (files.length > 0) {
+        uploadedImages = await uploadMultipleToS3(files);
+    }
+
+    const newColor = {
+        name,
+        body,
+        door: door || "",
+        price: price || 0,
+        mrp: mrp || 0,
+        available: available !== undefined ? available : true,
+        images: uploadedImages,
+    };
+
+    product.colors.push(newColor);
+    await product.save();
+
+    return successResponse(res, newColor, "Color option added successfully", 201);
 });

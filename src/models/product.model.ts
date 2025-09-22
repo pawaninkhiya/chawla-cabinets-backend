@@ -2,15 +2,15 @@ import mongoose, { Schema, Document, Types } from "mongoose";
 
 // COLOR OPTION
 export interface ColorOption {
+    _id?: Types.ObjectId;   // <-- Add this
     name: string;
     body: string;
     door: string;
     images: string[];
     price?: number;
     mrp?: number;
-    available?: boolean
+    available?: boolean;
 }
-
 const ColorOptionSchema = new Schema<ColorOption>(
     {
         name: { type: String, required: true },
@@ -21,7 +21,7 @@ const ColorOptionSchema = new Schema<ColorOption>(
         mrp: { type: Number, default: 0 },
         available: { type: Boolean, default: true }, // New field
     },
-    { _id: false }
+    { _id: true }
 );
 
 // PRODUCT
@@ -38,7 +38,7 @@ export interface Product extends Document {
     material: string;
     warranty: string;
     paintType: string;
-    colors: ColorOption[];
+     colors: Types.DocumentArray<ColorOption & Document>;
     colorsAvailable: boolean; // New field
     cardImage?: string;
 }

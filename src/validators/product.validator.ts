@@ -67,3 +67,20 @@ export const createProductSchema = Joi.object({
         })
     ).default([]),
 });
+
+
+
+export const addColorOptionSchema = Joi.object({
+    name: Joi.string().trim().required().messages({
+        "string.empty": "Color name is required",
+        "any.required": "Color name is required",
+    }),
+    body: Joi.string().trim().required().messages({
+        "string.empty": "Body color is required",
+        "any.required": "Body color is required",
+    }),
+    door: Joi.string().trim().optional(),
+    price: Joi.number().min(0).optional(),
+    mrp: Joi.number().min(0).optional(),
+    available: Joi.boolean().optional(),
+});
