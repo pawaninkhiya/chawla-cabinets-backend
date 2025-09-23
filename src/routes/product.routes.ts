@@ -29,7 +29,7 @@ router.get("/", authMiddleware, getAllProducts);
 router.get("/:id", authMiddleware, getProductById);
 
 // Update product details 
-router.put("/:id", authMiddleware, upload.none(), updateProduct);
+router.put("/:id", authMiddleware, updateProduct);
 
 // Delete product
 router.delete("/:id", authMiddleware, deleteProduct);
