@@ -5,6 +5,9 @@ import { deleteMultipleFromS3, uploadFileToS3, uploadMultipleToS3 } from "../uti
 import { buildSearchQuery } from "../utils/query";
 import { paginate } from "../utils/pagination";
 
+
+
+//  CREATE PRODUCT
 export const createProduct = asyncHandler(async (req: Request, res: Response) => {
     const { _id } = req.user;
     const {
@@ -88,6 +91,7 @@ export const createProduct = asyncHandler(async (req: Request, res: Response) =>
     return successResponse(res, newProduct, "Product created successfully", 201);
 });
 
+//  GET ALL PRODUCTS
 export const getAllProducts = asyncHandler(async (req: Request, res: Response) => {
     try {
         const search = (req.query.search as string) || "";
@@ -134,7 +138,7 @@ export const getAllProducts = asyncHandler(async (req: Request, res: Response) =
     }
 });
 
-// Get single product by ID
+//  GET PRODUCT BY ID
 export const getProductById = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
 
@@ -154,6 +158,25 @@ export const getProductById = asyncHandler(async (req: Request, res: Response) =
     return successResponse(res, { product }, "Product fetched successfully", 200);
 });
 
+//  UPDATE PRODUCT
+
+export const updateProduct = asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    if (!id) return errorResponse(res, "Product ID is required", 400);
+
+    const product = await ProductModel.findById(id);
+    if (!product) return errorResponse(res, "Product not found", 404);
+    const { colors, ...rest } = updateData;
+    Object.assign(product, rest);
+
+    await product.save();
+
+    return successResponse(res, product, "Product updated successfully (colors not updated)", 200);
+});
+
+// UPDATE PRODUCT COLOR OPTION
 export const updateProductColorOption = asyncHandler(async (req: Request, res: Response) => {
     const { productId, colorId } = req.params;
     const { name, body, door, price, mrp, available, removeImages } = req.body;
@@ -193,6 +216,8 @@ export const updateProductColorOption = asyncHandler(async (req: Request, res: R
     return successResponse(res, color, "Color option updated successfully", 200);
 });
 
+
+//  ADD PRODUCT COLOR OPTION
 export const addProductColorOption = asyncHandler(async (req: Request, res: Response) => {
     const { productId } = req.params;
     const { name, body, door, price, mrp, available } = req.body;
@@ -223,3 +248,55 @@ export const addProductColorOption = asyncHandler(async (req: Request, res: Resp
 
     return successResponse(res, newColor, "Color option added successfully", 201);
 });
+
+// UPDATE PRODUCT COLOR IMAGES ORDER
+export const updateProductColorImagesOrder = asyncHandler(async (req: Request, res: Response) => {
+    const { productId, colorId } = req.params;
+    const { newOrder } = req.body;
+
+    if (!productId) return errorResponse(res, "Product ID is required", 400);
+    if (!colorId) return errorResponse(res, "Color ID is required", 400);
+    if (!Array.isArray(newOrder)) return errorResponse(res, "newOrder must be an array of image URLs", 400);
+
+    const product = await ProductModel.findById(productId);
+    if (!product) return errorResponse(res, "Product not found", 404);
+
+    const color = product.colors.id(colorId);
+    if (!color) return errorResponse(res, "Color option not found", 404);
+
+    const currentImages = color.images || [];
+    const isValidOrder = newOrder.every(url => currentImages.includes(url));
+    if (!isValidOrder) return errorResponse(res, "All image URLs must already exist for this color", 400);
+
+    color.images = newOrder;
+
+    await product.save();
+
+    return successResponse(res, color, "Color images order updated successfully", 200);
+});
+
+// DELETE PRODUCT
+export const deleteProduct = asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    if (!id) return errorResponse(res, "Product ID is required", 400);
+
+    const product = await ProductModel.findById(id);
+    if (!product) return errorResponse(res, "Product not found", 404);
+
+    const imagesToDelete: string[] = [];
+    if (product.cardImage) imagesToDelete.push(product.cardImage);
+    product.colors.forEach(color => {
+        if (color.images?.length > 0) imagesToDelete.push(...color.images);
+    });
+
+    if (imagesToDelete.length > 0) {
+        const keys = imagesToDelete.map(url => url.split("/").pop() as string);
+        await deleteMultipleFromS3(keys);
+    }
+
+    await product.deleteOne();
+
+    return successResponse(res, null, "Product deleted successfully", 200);
+});
+
